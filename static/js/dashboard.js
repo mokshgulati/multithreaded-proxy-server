@@ -13,12 +13,42 @@ document.addEventListener('DOMContentLoaded', function() {
     
     socket.on('connect', function() {
         console.log('Connected to server');
+        // Add a test message to the log output to verify it's working
+        logOutput.innerHTML += "Connected to server\n";
+        logOutput.scrollTop = logOutput.scrollHeight;
+    });
+    
+    socket.on('connect_error', function(error) {
+        console.error('Connection error:', error);
+        logOutput.innerHTML += "Socket.IO connection error\n";
+        logOutput.scrollTop = logOutput.scrollHeight;
     });
     
     socket.on('proxy_log', function(data) {
+        console.log('Received log:', data); // Debug log
+        
+        if (!data || !data.data) {
+            console.error('Invalid log data received');
+            return;
+        }
+        
         const log = data.data;
-        logOutput.innerHTML += log + '\n';
+        // Add a timestamp to each log entry
+        const timestamp = new Date().toLocaleTimeString();
+        const formattedLog = `[${timestamp}] ${log}`;
+        
+        // Append to log output with proper formatting
+        logOutput.innerHTML += formattedLog + '\n';
+        
+        // Auto-scroll to bottom
         logOutput.scrollTop = logOutput.scrollHeight;
+        
+        // Limit the number of log lines to prevent performance issues
+        const maxLines = 1000;
+        const lines = logOutput.innerHTML.split('\n');
+        if (lines.length > maxLines) {
+            logOutput.innerHTML = lines.slice(lines.length - maxLines).join('\n');
+        }
     });
     
     // Check proxy status
@@ -31,6 +61,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     statusBadge.className = 'badge bg-success';
                     startBtn.disabled = true;
                     stopBtn.disabled = false;
+                    
+                    // If proxy is running, fetch logs
+                    fetchProxyLogs();
                 } else {
                     statusBadge.textContent = 'Stopped';
                     statusBadge.className = 'badge bg-danger';
@@ -42,6 +75,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error checking proxy status:', error);
                 statusBadge.textContent = 'Unknown';
                 statusBadge.className = 'badge bg-warning';
+            });
+    }
+    
+    // Fetch proxy logs from API
+    function fetchProxyLogs() {
+        fetch('/api/proxy_logs')
+            .then(response => response.json())
+            .then(data => {
+                if (data.logs && data.logs.length > 0) {
+                    // Clear existing logs
+                    logOutput.innerHTML = '';
+                    
+                    // Add each log with timestamp
+                    data.logs.forEach(log => {
+                        const timestamp = new Date().toLocaleTimeString();
+                        logOutput.innerHTML += `[${timestamp}] ${log}\n`;
+                    });
+                    
+                    // Auto-scroll to bottom
+                    logOutput.scrollTop = logOutput.scrollHeight;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching proxy logs:', error);
             });
     }
     
@@ -110,6 +167,6 @@ document.addEventListener('DOMContentLoaded', function() {
     checkProxyStatus();
     loadServerInfo();
     
-    // Periodic status check
+    // Periodic status check and log updates
     setInterval(checkProxyStatus, 5000);
 });

@@ -26,13 +26,14 @@ load_dotenv()
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'proxy-dashboard-secret-key'
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=True)
 
 # Global variables
 proxy_process = None
 proxy_running = False
 test_results = []
 current_config = {}
+proxy_logs = []  # Store logs in memory
 
 # Load default configuration
 def load_config():
@@ -88,13 +89,32 @@ def stop_proxy_server():
 
 # Read proxy server output
 def read_proxy_output():
-    global proxy_process
+    global proxy_process, proxy_logs
     while proxy_running and proxy_process:
-        output = proxy_process.stdout.readline()
-        if output:
-            socketio.emit('proxy_log', {'data': output.strip()})
-        else:
-            break
+        try:
+            output = proxy_process.stdout.readline()
+            if output:
+                log_message = output.strip()
+                print(f"Sending log: {log_message}")  # Debug print
+                
+                # Store log in memory (limit to last 1000 logs)
+                proxy_logs.append(log_message)
+                if len(proxy_logs) > 1000:
+                    proxy_logs = proxy_logs[-1000:]
+                
+                # Also try to emit via Socket.IO
+                socketio.emit('proxy_log', {'data': log_message})
+                
+                # Add a small sleep to prevent CPU overuse
+                time.sleep(0.01)
+            else:
+                # If no output, check if process is still running
+                if proxy_process.poll() is not None:
+                    break
+                time.sleep(0.1)
+        except Exception as e:
+            print(f"Error reading proxy output: {e}")
+            time.sleep(1)  # Wait a bit before retrying
 
 # Run a load test
 def run_load_test(params):
@@ -255,10 +275,20 @@ def api_charts():
     charts = generate_charts()
     return jsonify(charts or {})
 
+@app.route('/api/proxy_logs')
+def api_proxy_logs():
+    """API endpoint to get proxy logs"""
+    global proxy_logs
+    return jsonify({
+        'logs': proxy_logs
+    })
+
 # Socket.IO events
 @socketio.on('connect')
 def socket_connect():
-    emit('status', {'data': 'Connected to server'})
+    print("Client connected")
+    # Send a test log message to verify connection
+    socketio.emit('proxy_log', {'data': 'Socket.IO connection established'})
 
 @socketio.on('disconnect')
 def socket_disconnect():

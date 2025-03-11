@@ -28,6 +28,10 @@ body {
     font-family: monospace;
     font-size: 0.9rem;
     white-space: pre-wrap;
+    color: #ffffff;
+    background-color: #212529;
+    padding: 10px;
+    border-radius: 5px;
 }
 
 #raw-output {

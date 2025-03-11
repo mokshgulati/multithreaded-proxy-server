@@ -213,4 +213,44 @@ The proxy server is designed with the following components:
 - The server does not implement authentication or encryption - use with caution in production environments
 - Consider running behind a reverse proxy like Nginx for additional security features
 
+## Screenshots
 
+### Dashboard Home Page
+![Dashboard Home Page](/static/images/Screenshot_1.png)
+*The main dashboard page showing the proxy server status, controls to start/stop the server, real-time logs, and quick access to other features.*
+
+### Configuration Page
+![Configuration Page](/static/images/Screenshot_2.png)
+*The configuration page allows you to customize all proxy server settings including host, port, thread pool size, Redis connection, and backend servers.*
+
+### Load Testing Page
+![Load Testing Page](/static/images/Screenshot_3.png)
+*The load testing interface where you can configure and run performance tests against the proxy server with various parameters.*
+
+### Load Test Results
+![Load Test Results](/static/images/Screenshot_4.png)
+*Detailed results from a load test showing key metrics like requests per second, response times, and success rates.*
+
+### Performance Charts
+![Performance Charts](/static/images/Screenshot_5.png)
+*Visual representation of load test results with charts showing performance metrics over time.*
+
+### Real-time Server Logs
+![Real-time Server Logs](/static/images/Screenshot_6.png)
+*Live server logs displayed in the dashboard, providing real-time insight into the proxy server's operation.*
+
+### Proxy Statistics
+![Proxy Statistics](/static/images/Screenshot_7.png)
+*Comprehensive statistics about the proxy server's performance, including request counts, cache hits, and active connections.*
+
+### Backend Server Response
+![Backend Server Response](/static/images/Screenshot_8.png)
+*Example of a response from a backend server being proxied through the multithreaded proxy server.*
+
+### Error Handling
+![Error Handling](/static/images/Screenshot_9.png)
+*Demonstration of how the proxy server handles and logs errors during request processing.*
+
+### Mobile View
+![Mobile View](/static/images/Screenshot_10.png)
+*The dashboard is fully responsive and works well on mobile devices for on-the-go monitoring and management.*
