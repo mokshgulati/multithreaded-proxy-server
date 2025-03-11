@@ -48,7 +48,7 @@ A production-ready, high-performance HTTP/HTTPS proxy server implemented in Pyth
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/mokshgulati/multithreaded-proxy-server
 cd multithreaded_proxy_server
 ```
 
@@ -168,6 +168,4 @@ The proxy server is designed with the following components:
 - The server does not implement authentication or encryption - use with caution in production environments
 - Consider running behind a reverse proxy like Nginx for additional security features
 
-## License
 
-[MIT License](LICENSE)
