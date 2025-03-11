@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Load Testing - Proxy Server Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Proxy Server Dashboard</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/config">Configuration</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/load_test">Load Testing</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Load Testing</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h4>Test Configuration</h4>
+                                <form id="load-test-form">
+                                    <div class="mb-3">
+                                        <label for="url" class="form-label">Target URL</label>
+                                        <input type="text" class="form-control" id="url" name="url" value="http://localhost:8080">
+                                        <div class="form-text">URL to test, including the proxy server port</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="path" class="form-label">Path</label>
+                                        <input type="text" class="form-control" id="path" name="path" value="/">
+                                        <div class="form-text">Path to request (e.g., /, /api/data, etc.)</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="requests" class="form-label">Number of Requests</label>
+                                        <input type="number" class="form-control" id="requests" name="requests" value="100">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="concurrency" class="form-label">Concurrency Level</label>
+                                        <input type="number" class="form-control" id="concurrency" name="concurrency" value="10">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="method" class="form-label">HTTP Method</label>
+                                        <select class="form-select" id="method" name="method">
+                                            <option value="GET">GET</option>
+                                            <option value="POST">POST</option>
+                                            <option value="PUT">PUT</option>
+                                            <option value="DELETE">DELETE</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="time_based" name="time_based">
+                                        <label class="form-check-label" for="time_based">Time-based Test</label>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="duration" class="form-label">Test Duration (seconds)</label>
+                                        <input type="number" class="form-control" id="duration" name="duration" value="30">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Run Test</button>
+                                </form>
+                            </div>
+                            <div class="col-md-6">
+                                <h4>Test Status</h4>
+                                <div id="test-status" class="alert alert-info">
+                                    Ready to run tests
+                                </div>
+                                <div id="test-progress" class="progress mb-3" style="display: none;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                                </div>
+                                <div id="test-results" class="d-none">
+                                    <h5>Latest Results</h5>
+                                    <table class="table table-striped">
+                                        <tbody id="results-table">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Test Results Visualization</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="chart-container">
+                                    <h4>Requests per Second</h4>
+                                    <img id="rps-chart" src="" class="img-fluid d-none">
+                                    <div id="no-rps-data" class="alert alert-warning">No data available</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="chart-container">
+                                    <h4>Response Time</h4>
+                                    <img id="response-time-chart" src="" class="img-fluid d-none">
+                                    <div id="no-rt-data" class="alert alert-warning">No data available</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-4">
+                            <div class="col-md-12">
+                                <div class="chart-container">
+                                    <h4>Test History</h4>
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Time</th>
+                                                <th>Requests</th>
+                                                <th>Concurrency</th>
+                                                <th>RPS</th>
+                                                <th>Avg. Time (ms)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="history-table">
+                                            <tr>
+                                                <td colspan="5" class="text-center">No test history</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Raw Test Output</h2>
+                    </div>
+                    <div class="card-body">
+                        <pre id="raw-output" class="bg-dark text-light p-3 rounded" style="height: 300px; overflow-y: auto;">No test output yet</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io/client-dist/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/load_test.js') }}"></script>
+</body>
+</html>

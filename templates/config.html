@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration - Proxy Server Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Proxy Server Dashboard</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/config">Configuration</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/load_test">Load Testing</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Proxy Server Configuration</h2>
+                    </div>
+                    <div class="card-body">
+                        <form action="/save_config" method="POST">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h4>Server Settings</h4>
+                                    <div class="mb-3">
+                                        <label for="HOST" class="form-label">Host</label>
+                                        <input type="text" class="form-control" id="HOST" name="HOST" value="{{ config.get('HOST', '0.0.0.0') }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="PORT" class="form-label">Port</label>
+                                        <input type="number" class="form-control" id="PORT" name="PORT" value="{{ config.get('PORT', '8080') }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="THREAD_POOL_SIZE" class="form-label">Thread Pool Size</label>
+                                        <input type="number" class="form-control" id="THREAD_POOL_SIZE" name="THREAD_POOL_SIZE" value="{{ config.get('THREAD_POOL_SIZE', '50') }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="REQUEST_QUEUE_SIZE" class="form-label">Request Queue Size</label>
+                                        <input type="number" class="form-control" id="REQUEST_QUEUE_SIZE" name="REQUEST_QUEUE_SIZE" value="{{ config.get('REQUEST_QUEUE_SIZE', '100') }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="CONNECTION_TIMEOUT" class="form-label">Connection Timeout (seconds)</label>
+                                        <input type="number" class="form-control" id="CONNECTION_TIMEOUT" name="CONNECTION_TIMEOUT" value="{{ config.get('CONNECTION_TIMEOUT', '30') }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h4>Redis Settings</h4>
+                                    <div class="mb-3">
+                                        <label for="REDIS_HOST" class="form-label">Redis Host</label>
+                                        <input type="text" class="form-control" id="REDIS_HOST" name="REDIS_HOST" value="{{ config.get('REDIS_HOST', 'localhost') }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="REDIS_PORT" class="form-label">Redis Port</label>
+                                        <input type="number" class="form-control" id="REDIS_PORT" name="REDIS_PORT" value="{{ config.get('REDIS_PORT', '6379') }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="CACHE_EXPIRATION" class="form-label">Cache Expiration (seconds)</label>
+                                        <input type="number" class="form-control" id="CACHE_EXPIRATION" name="CACHE_EXPIRATION" value="{{ config.get('CACHE_EXPIRATION', '300') }}">
+                                    </div>
+                                    
+                                    <h4>Rate Limiting</h4>
+                                    <div class="mb-3">
+                                        <label for="RATE_LIMIT_REQUESTS" class="form-label">Rate Limit Requests</label>
+                                        <input type="number" class="form-control" id="RATE_LIMIT_REQUESTS" name="RATE_LIMIT_REQUESTS" value="{{ config.get('RATE_LIMIT_REQUESTS', '100') }}">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="RATE_LIMIT_WINDOW" class="form-label">Rate Limit Window (seconds)</label>
+                                        <input type="number" class="form-control" id="RATE_LIMIT_WINDOW" name="RATE_LIMIT_WINDOW" value="{{ config.get('RATE_LIMIT_WINDOW', '60') }}">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    <h4>Backend Servers</h4>
+                                    <div class="mb-3">
+                                        <label for="BACKEND_SERVERS" class="form-label">Backend Servers (comma-separated)</label>
+                                        <input type="text" class="form-control" id="BACKEND_SERVERS" name="BACKEND_SERVERS" value="{{ config.get('BACKEND_SERVERS', 'http://localhost:8000') }}">
+                                    </div>
+                                    
+                                    <h4>Request Filters</h4>
+                                    <div class="mb-3">
+                                        <label for="REQUEST_FILTERS" class="form-label">Request Filters (comma-separated)</label>
+                                        <input type="text" class="form-control" id="REQUEST_FILTERS" name="REQUEST_FILTERS" value="{{ config.get('REQUEST_FILTERS', '') }}">
+                                    </div>
+                                    
+                                    <h4>Other Settings</h4>
+                                    <div class="mb-3 form-check">
+                                        <input type="checkbox" class="form-check-input" id="ENABLE_COMPRESSION" name="ENABLE_COMPRESSION" {% if config.get('ENABLE_COMPRESSION', 'True').lower() in ('true', 'yes', '1', 't', 'y') %}checked{% endif %}>
+                                        <label class="form-check-label" for="ENABLE_COMPRESSION">Enable Compression</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">Save Configuration</button>
+                                <a href="/" class="btn btn-secondary ms-2">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

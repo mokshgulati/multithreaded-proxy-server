@@ -57,13 +57,10 @@ DEFAULT_CONFIG = {
 }
 
 # Load configuration from environment variables or use defaults
-CONFIG = {}
-for key, default_value in DEFAULT_CONFIG.items():
-    env_value = os.environ.get(key)
-    if env_value is not None:
-        CONFIG[key] = env_value
-    else:
-        CONFIG[key] = default_value
+CONFIG = {
+    key: os.environ.get(key, DEFAULT_CONFIG[key]) 
+    for key in DEFAULT_CONFIG
+}
 
 # Convert numeric values
 for key in ["PORT", "THREAD_POOL_SIZE", "REQUEST_QUEUE_SIZE", 
@@ -75,21 +72,9 @@ for key in ["PORT", "THREAD_POOL_SIZE", "REQUEST_QUEUE_SIZE",
         except (ValueError, TypeError):
             CONFIG[key] = DEFAULT_CONFIG[key]
 
-# Convert boolean values
-for key in ["ENABLE_COMPRESSION"]:
-    if key in CONFIG:
-        if isinstance(CONFIG[key], str):
-            CONFIG[key] = CONFIG[key].lower() in ('true', 'yes', '1', 't', 'y')
-
 # Parse backend servers list
 if isinstance(CONFIG["BACKEND_SERVERS"], str):
-    CONFIG["BACKEND_SERVERS"] = [s.strip() for s in CONFIG["BACKEND_SERVERS"].split(",") if s.strip()]
-    if not CONFIG["BACKEND_SERVERS"]:  # If empty after parsing
-        CONFIG["BACKEND_SERVERS"] = DEFAULT_CONFIG["BACKEND_SERVERS"]
-
-# Parse request filters
-if isinstance(CONFIG["REQUEST_FILTERS"], str):
-    CONFIG["REQUEST_FILTERS"] = [s.strip() for s in CONFIG["REQUEST_FILTERS"].split(",") if s.strip()]
+    CONFIG["BACKEND_SERVERS"] = CONFIG["BACKEND_SERVERS"].split(",")
 
 
 class Statistics:
@@ -201,10 +186,7 @@ class CacheManager:
         
         # Include body for non-GET requests if present
         if method != 'GET' and body:
-            if isinstance(body, bytes):
-                key_components['body'] = body.decode('utf-8', errors='ignore')
-            else:
-                key_components['body'] = body
+            key_components['body'] = body
             
         # Create a JSON string and hash it
         key_str = json.dumps(key_components, sort_keys=True)
@@ -215,7 +197,7 @@ class CacheManager:
         Try to get a cached response for the request.
         Returns None if not found or expired.
         """
-        if method != 'GET':  # Only cache GET requests by default
+        if method != 'GET':  # Only check cache for GET requests
             return None
             
         cache_key = self._generate_cache_key(method, url, headers, body)
@@ -223,18 +205,15 @@ class CacheManager:
         
         if cached_data:
             self._stats.increment("cache_hits")
-            try:
-                cached_response = json.loads(cached_data)
-                # Convert content back to bytes if it was stored as base64
-                if 'content_base64' in cached_response:
-                    import base64
-                    cached_response['content'] = base64.b64decode(cached_response['content_base64'])
-                    del cached_response['content_base64']
-                return cached_response
-            except json.JSONDecodeError:
-                # If we can't decode the cached data, treat it as a cache miss
-                self._stats.increment("cache_misses")
-                return None
+            cached_response = json.loads(cached_data)
+            
+            # Convert base64 content back to bytes if needed
+            if 'content_base64' in cached_response and not 'content' in cached_response:
+                import base64
+                cached_response['content'] = base64.b64decode(cached_response['content_base64'])
+                del cached_response['content_base64']
+                
+            return cached_response
         else:
             self._stats.increment("cache_misses")
             return None
@@ -256,24 +235,21 @@ class CacheManager:
         if 'no-store' in cache_control or 'no-cache' in cache_control:
             return
         
-        # Make a copy of the response data to avoid modifying the original
+        # Create a copy of the response data for caching
         cache_data = response_data.copy()
         
-        # Convert binary content to base64 for JSON serialization
+        # Handle binary content by converting to base64
         if 'content' in cache_data and isinstance(cache_data['content'], bytes):
             import base64
             cache_data['content_base64'] = base64.b64encode(cache_data['content']).decode('ascii')
-            del cache_data['content']
+            del cache_data['content']  # Remove binary content from the JSON
             
-        try:
-            # Store the response in Redis
-            self._redis.setex(
-                cache_key,
-                self._expiration_time,
-                json.dumps(cache_data)
-            )
-        except (TypeError, json.JSONDecodeError) as e:
-            logger.error(f"Error caching response: {e}")
+        # Store the response in Redis
+        self._redis.setex(
+            cache_key,
+            self._expiration_time,
+            json.dumps(cache_data)
+        )
     
     def invalidate_cache(self, url_pattern=None):
         """
@@ -303,32 +279,28 @@ class RequestFilter:
     """Filters requests based on configured rules."""
     
     def __init__(self, filter_rules):
-        self._filter_rules = filter_rules if isinstance(filter_rules, list) else []
+        self._filter_rules = filter_rules
     
     def should_filter(self, url, headers):
         """
         Check if a request should be filtered based on URL and headers.
         Returns True if the request should be blocked, False otherwise.
         """
-        # If no filter rules defined, don't filter anything
-        if not self._filter_rules or len(self._filter_rules) == 0:
-            return False
-            
         url_lower = url.lower()
         
         # Check URL against filter rules
         for rule in self._filter_rules:
-            if rule and rule.lower() in url_lower:
+            if rule.lower() in url_lower:
                 return True
                 
-        # Check for suspicious headers - disabled for now
-        # for header, value in headers.items():
-        #     header_lower = header.lower()
-        #     value_lower = value.lower()
-        #     
-        #     # Example: Block requests with suspicious user agents
-        #     if header_lower == 'user-agent' and ('bot' in value_lower or 'crawler' in value_lower):
-        #         return True
+        # Check for suspicious headers
+        for header, value in headers.items():
+            header_lower = header.lower()
+            value_lower = value.lower()
+            
+            # Example: Block requests with suspicious user agents
+            if header_lower == 'user-agent' and ('bot' in value_lower or 'crawler' in value_lower):
+                return True
                 
         return False
 
@@ -629,29 +601,26 @@ class ProxyServer:
     
     def _forward_request(self, client_socket, method, path, headers, body):
         """Forward the request to a backend server and relay the response."""
+        # Select a backend server
+        backend_server = self.connection_pool._select_backend_server()
+        
+        # Get a session from the connection pool
+        session = self.connection_pool.get_session(backend_server)
+        
+        # Construct the full URL
+        if path.startswith('http'):
+            url = path  # The path is already a full URL
+        else:
+            url = f"{backend_server}{path}"
+        
         try:
-            # Select a backend server
-            backend_server = self.connection_pool._select_backend_server()
-            
-            # Get a session from the connection pool
-            session = self.connection_pool.get_session(backend_server)
-            
-            # Construct the full URL
-            if path.startswith('http'):
-                url = path  # The path is already a full URL
-            else:
-                url = f"{backend_server}{path}"
-            
-            logger.info(f"Forwarding request: {method} {url}")
-            
             # Prepare the request
             request_kwargs = {
                 'method': method,
                 'url': url,
                 'headers': headers,
                 'timeout': self.connection_timeout,
-                'allow_redirects': False,  # Let the client handle redirects
-                'verify': False  # Disable SSL verification for testing
+                'allow_redirects': False  # Let the client handle redirects
             }
             
             if body:
@@ -668,7 +637,7 @@ class ProxyServer:
                 'url': url
             }
             
-            # Cache the response if appropriate (only cache successful responses)
+            # Cache the response if appropriate
             if method == "GET" and 200 <= response.status_code < 400:
                 self.cache_manager.cache_response(
                     method, path, headers, response_data, body
@@ -677,8 +646,7 @@ class ProxyServer:
             # Send the response back to the client
             self._send_response_to_client(client_socket, response_data)
             
-            # Update statistics - count as success even if backend returns error code
-            # since we successfully proxied the request
+            # Update statistics
             self.statistics.increment("requests_success")
             self.statistics.increment("bytes_transferred", len(response.content))
             

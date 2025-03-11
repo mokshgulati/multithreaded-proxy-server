@@ -101,6 +101,51 @@ With custom configuration:
 python proxy_server.py --host localhost --port 8080 --threads 100 --redis-host localhost --redis-port 6379 --cache-expiry 600 --backend "http://backend1.example.com,http://backend2.example.com"
 ```
 
+### Using the Web Dashboard
+
+The project includes a web-based dashboard for managing the proxy server and running load tests with a user-friendly interface.
+
+#### Starting the Dashboard
+
+```bash
+# Install the required dependencies first
+pip install -r requirements.txt
+
+# Start the dashboard server
+python dashboard.py
+```
+
+The dashboard will be available at http://localhost:5000 in your web browser.
+
+#### Dashboard Features
+
+1. **Home Page**
+   - View proxy server status (running/stopped)
+   - Start and stop the proxy server
+   - Monitor server logs in real-time
+   - View current server configuration
+
+2. **Configuration Page**
+   - Edit all proxy server settings
+   - Save configuration changes to the .env file
+   - Configure thread pool size, Redis settings, backend servers, etc.
+
+3. **Load Testing Page**
+   - Run load tests against the proxy server
+   - Configure test parameters (requests, concurrency, HTTP method, etc.)
+   - View real-time test results and statistics
+   - Visualize performance metrics with charts
+   - Review test history
+
+#### Example Workflow
+
+1. Start the dashboard: `python dashboard.py`
+2. Open http://localhost:5000 in your browser
+3. Go to the Configuration page to set up your proxy server
+4. Return to the Home page and click "Start Server"
+5. Go to the Load Testing page to run performance tests
+6. View the results and adjust your configuration as needed
+
 ### Starting the Test Backend Server
 
 For testing purposes, a simple backend server is included:

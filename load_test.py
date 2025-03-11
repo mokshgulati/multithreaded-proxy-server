@@ -182,10 +182,6 @@ class LoadTest:
         median_time = statistics.median(self.response_times)
         p95_time = sorted(self.response_times)[int(len(self.response_times) * 0.95)]
         
-        # Count successful requests (any valid HTTP response is a success from proxy perspective)
-        successful_responses = sum(1 for code in self.status_codes.keys() if code != "Error")
-        success_rate = (successful_responses / total_requests) * 100 if total_requests > 0 else 0
-        
         # Print results
         print("\n" + "="*50)
         print(f"LOAD TEST RESULTS - {self.method} {self.proxy_url}")
@@ -194,7 +190,6 @@ class LoadTest:
         print(f"Total time:           {total_time:.2f} seconds")
         print(f"Requests per second:  {requests_per_second:.2f}")
         print(f"Concurrency level:    {self.concurrency}")
-        print(f"Success rate:         {success_rate:.1f}% (any valid HTTP response)")
         print("\nResponse time statistics:")
         print(f"  Min:                {min_time*1000:.2f} ms")
         print(f"  Max:                {max_time*1000:.2f} ms")
@@ -205,21 +200,7 @@ class LoadTest:
         print("\nStatus code distribution:")
         for status_code, count in sorted(self.status_codes.items()):
             percentage = (count / total_requests) * 100
-            status_text = status_code
-            
-            # Add descriptive text for common status codes
-            if status_code == 200:
-                status_text = f"{status_code} (OK)"
-            elif status_code == 404:
-                status_text = f"{status_code} (Not Found)"
-            elif status_code == 500:
-                status_text = f"{status_code} (Internal Server Error)"
-            elif status_code == 502:
-                status_text = f"{status_code} (Bad Gateway)"
-            elif status_code == 504:
-                status_text = f"{status_code} (Gateway Timeout)"
-            
-            print(f"  {status_text}: {count} ({percentage:.1f}%)")
+            print(f"  {status_code}: {count} ({percentage:.1f}%)")
         
         if self.errors:
             print(f"\nErrors: {len(self.errors)} ({len(self.errors)/total_requests*100:.1f}%)")
